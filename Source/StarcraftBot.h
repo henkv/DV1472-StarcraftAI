@@ -37,23 +37,29 @@ public:
 	void onUnitDestroy(BWAPI::Unit* unit);
 	// --- //
 
-
+	// Get Functions //
+	// Units
 	Unit* getWorker();
 	Unit* getTrainer(UnitType type);	
 	Unit* getClosestGeyser(Unit* unit);
 	Unit* getClosestMineral(Unit* unit);
-
+	// Positions
 	Position	 getGuardPoint();
 	TilePosition getBuildTile(Unit* worker, UnitType type);
+	// --- //
 
+	// Help Functions //
 	bool buildingTooClose(TilePosition tile, UnitType type);
 
 	bool canAfford(UnitType unit);
 	void reserveUnitCost(UnitType unit);
 	void releaseUnitCost(UnitType unit);
+	// --- //
 
+	// Action Functions //
 	void trainUnit(UnitType type, int amount = 1);
 	void constructBuilding(UnitType building, int amount = 1);
 
 	void idleWorkers();
+	// --- //
 };

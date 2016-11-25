@@ -1,5 +1,6 @@
 #include "StarcraftBot.h"
 
+// Local classes //
 struct StarcraftBot::Box
 {
 	Position topLeft;
@@ -169,6 +170,7 @@ public:
 		return done;
 	}
 };
+// --- //
 
 // Event Handlers //
 void StarcraftBot::onStart()
@@ -187,7 +189,6 @@ void StarcraftBot::onStart()
 	constructBuilding(UnitTypes::Terran_Supply_Depot);
 	
 }
-
 
 void StarcraftBot::onFrame()
 {
@@ -245,8 +246,6 @@ void StarcraftBot::onFrame()
 	}
 
 
-
-
 	if (focusWorker != NULL)
 	{
 		UnitType type = UnitTypes::Terran_Supply_Depot;
@@ -278,8 +277,6 @@ void StarcraftBot::onFrame()
 			}
 		}
 	}
-
-	
 }
 
 void StarcraftBot::onUnitCreate(BWAPI::Unit* unit)
@@ -322,6 +319,8 @@ void StarcraftBot::onUnitDestroy(BWAPI::Unit* unit)
 }
 // --- //
 
+// Get Functions //
+// Units
 Unit* StarcraftBot::getWorker()
 {
 	Unit* worker = NULL;
@@ -397,7 +396,7 @@ Unit* StarcraftBot::getClosestMineral(Unit* unit)
 
 	return closestMineral;
 }
-
+// Positions
 Position StarcraftBot::getGuardPoint()
 {
 	double length;
@@ -451,8 +450,9 @@ TilePosition StarcraftBot::getBuildTile(Unit* worker, UnitType type)
 
 	return TilePositions::None;
 }
+// --- //
 
-
+// Help Functions //
 bool StarcraftBot::buildingTooClose(TilePosition tile, UnitType type)
 {
 	static const Position margin = Position(16, 16);
@@ -506,7 +506,9 @@ void StarcraftBot::releaseUnitCost(UnitType unit)
 	if (reservedGas < 0) reservedGas = 0;
 	if (reservedMinerals < 0) reservedMinerals = 0;
 }
+// --- //
 
+// Action Functions //
 void StarcraftBot::trainUnit(UnitType type, int amount)
 {
 	for (int i = 0; i < amount; i++)
@@ -519,7 +521,6 @@ void StarcraftBot::constructBuilding(UnitType type, int amount)
 		activeCommands.add(new BuildCommand(this, type));
 }
 
-// Send all idle workers to the mineral field
 void StarcraftBot::idleWorkers()
 {
 	set<Unit*> units = Broodwar->self()->getUnits();
@@ -533,3 +534,4 @@ void StarcraftBot::idleWorkers()
 		}
 	}
 }
+// --- //
