@@ -32,7 +32,6 @@ public:
 		: bot(_bot){}
 };
 
-
 class StarcraftBot::BuildCommand : public Command
 { 
 private:
@@ -170,6 +169,102 @@ public:
 		return done;
 	}
 };
+
+class StarcraftBot::AddonCommand : public Command
+{ 
+private:
+	UnitType type;
+	Unit* owner;
+	
+	bool done;
+	bool reserved;
+
+	Position lastPos;
+	Position movePos;
+	TilePosition buildPos;
+
+	Box box;
+	Box clearBox;
+
+public:
+	AddonCommand(StarcraftBot* bot, UnitType _type)
+		: Command(bot)
+	{
+		type = _type;
+		done = false;
+		reserved = false;
+
+		lastPos = Positions::None;
+		movePos = Positions::None;
+		buildPos = TilePositions::None;
+
+		box.color = Colors::Purple;
+		clearBox.color = Colors::Red;
+	};
+
+	void findBuildPos()
+	{
+		buildPos = bot->getBuildTile(owner, type);
+		movePos = Position(buildPos) + Position(type.tileWidth() * 16 - 1, type.tileHeight() * 16 - 1);
+
+		Position topLeft = Position(buildPos);
+		Position bottomRight = topLeft + Position(type.tileWidth() * 32, type.tileHeight() * 32);
+
+		box.topLeft = topLeft;
+		box.bottomRight = bottomRight;
+
+		clearBox.topLeft	 = box.topLeft	   - Position(16, 16);
+		clearBox.bottomRight = box.bottomRight + Position(16, 16);
+	}
+
+	bool run()
+	{ 
+		if (!reserved)
+		{
+			if (bot->canAfford(type))
+			{
+				bot->reserveUnitCost(type);
+				reserved = true;
+
+				owner = bot->getAddonOwner(type);
+				findBuildPos();
+				
+				bot->buildBoxes.add(&box);
+				bot->buildBoxes.add(&clearBox);
+			}
+		}
+		else
+		{
+			if (owner->getPosition() != movePos)
+			{
+				if (owner->getPosition() != lastPos)
+				{
+					owner->move(movePos);
+					lastPos = owner->getPosition();
+				}
+				else
+				{
+					findBuildPos();
+				}
+			}
+			else 
+			{
+				if (owner->buildAddon(buildPos, type))
+				{
+					done = true;
+					bot->buildBoxes.remove(&box);
+					bot->buildBoxes.remove(&clearBox);
+				}
+				else
+				{
+					findBuildPos();
+				}
+			}				
+		}
+
+		return done;
+	}
+};
 // --- //
 
 // Event Handlers //
@@ -184,10 +279,10 @@ void StarcraftBot::onStart()
 	reservedGas = 0;
 	reservedMinerals = 0;
 
-
-
-	constructBuilding(UnitTypes::Terran_Supply_Depot);
-	
+	constructBuilding(UnitTypes::Terran_Barracks, 2);
+	constructBuilding(UnitTypes::Terran_Supply_Depot, 5);
+	trainUnit(UnitTypes::Terran_Marine, 40);
+	trainUnit(UnitTypes::Terran_SCV, 6);	
 }
 
 void StarcraftBot::onFrame()
@@ -226,15 +321,7 @@ void StarcraftBot::onFrame()
 		reservedGas,
 		buildBoxes.size());
 
-	static Error lastError = Broodwar->getLastError();
-
-	if (lastError.getID() >= 0 && lastError.getID() < Errors::Unknown)
-	{
-		Broodwar->drawTextScreen(170, 355, "Last Error %d: %s", lastError.getID(), lastError.c_str());
-	}
-
-
-	for (size_t i = 0, size = buildBoxes.size(); i < size; i++)
+	for (i = 0, size = buildBoxes.size(); i < size; i++)
 	{
 		Broodwar->drawBoxMap(
 			buildBoxes[i]->topLeft.x(),
@@ -245,36 +332,38 @@ void StarcraftBot::onFrame()
 		);
 	}
 
+	static Unit* worker = getWorker();
+	static UnitType type = UnitTypes::Terran_SCV;
+	static TilePosition startPosition = Broodwar->self()->getStartLocation();
+	TilePosition testPosition;
 
-	if (focusWorker != NULL)
+	size_t r, d1, d2, d3, d4;
+	for (r = 0; r < 16; r++)
 	{
-		UnitType type = UnitTypes::Terran_Supply_Depot;
-		TilePosition startPosition = focusWorker->getTilePosition();
-		TilePosition testPosition;
+		d1 = r + r;
+		d2 = d1 + d1;
+		d3 = d2 + d1;
+		d4 = d3 + d1;
 
-		//game->setScreenPosition(focusWorker->getPosition() - Position(320, 200));
+		testPosition = startPosition;
+		testPosition.x() -= r;
+		testPosition.y() -= r;
 
-		for (int i = 0, i2, x, y; i < 8; i++)
+		for (i = 0; i < d4; i++)
 		{
-			i2 = i * 2;
-			for (y = 0; y <= i2; y++)
-			{
-				for (x = 0; x <= i2; y == 0 || y == i2 ? x++ : x += i2)
-				{
-					testPosition = startPosition + TilePosition(x - i, y - i);
-					if (Broodwar->canBuildHere(focusWorker, testPosition, type, true))
-					{
-						if (!buildingTooClose(testPosition, type))
-						{
-							Broodwar->drawCircleMap(testPosition.x() * 32 + 16, testPosition.y() * 32 + 16, 8, Colors::Green);
-						}
-						else
-						{
-							Broodwar->drawCircleMap(testPosition.x() * 32 + 16, testPosition.y() * 32 + 16, 8, Colors::Grey);
-						}
-					}
-				}
-			}
+			if (i < d1)
+				testPosition.x()++;
+			else if (i < d2)
+				testPosition.y()++;
+			else if (i < d3)
+				testPosition.x()--;
+			else
+				testPosition.y()--;
+
+			if (canBuildHere(worker, testPosition, type))
+				Broodwar->drawCircleMap(testPosition.x() * 32 + 16, testPosition.y() * 32 + 16, 8, Colors::White);
+			else 
+				Broodwar->drawCircleMap(testPosition.x() * 32 + 16, testPosition.y() * 32 + 16, 8, Colors::Grey);
 		}
 	}
 }
@@ -429,22 +518,31 @@ TilePosition StarcraftBot::getBuildTile(Unit* worker, UnitType type)
 	TilePosition startPosition = worker->getTilePosition();
 	TilePosition testPosition;
 
-	for (int i = 0, i2, x, y; i < 64; i++)
+	size_t r, d1, d2, d3, d4, i;
+	for (r = 0; r < 64; r++)
 	{
-		i2 = i * 2;
-		for (y = 0; y <= i2; y++)
+		d1 = r + r;
+		d2 = d1 + d1;
+		d3 = d2 + d1;
+		d4 = d3 + d1;
+
+		testPosition = startPosition;
+		testPosition.x() -= r;
+		testPosition.y() -= r;
+
+		for (i = 0; i < d4; i++)
 		{
-			for (x = 0; x <= i2; y == 0 || y == i2 ? x++ : x += i2)
-			{
-				testPosition = startPosition + TilePosition(x - i, y - i);
-				if (Broodwar->canBuildHere(worker, testPosition, type, true))
-				{
-					if (!buildingTooClose(testPosition, type))
-					{
-						return testPosition;
-					}
-				}
-			}
+			if (i < d1)
+				testPosition.x()++;
+			else if (i < d2)
+				testPosition.y()++;
+			else if (i < d3)
+				testPosition.x()--;
+			else
+				testPosition.y()--;
+
+			if (canBuildHere(worker, testPosition, type))
+				return testPosition;
 		}
 	}
 
@@ -453,10 +551,17 @@ TilePosition StarcraftBot::getBuildTile(Unit* worker, UnitType type)
 // --- //
 
 // Help Functions //
+bool StarcraftBot::canBuildHere(Unit* worker, TilePosition tile, UnitType type)
+{
+	return (Broodwar->canBuildHere(worker, tile, type, true) &&
+			!buildingTooClose(tile, type));
+}
+
 bool StarcraftBot::buildingTooClose(TilePosition tile, UnitType type)
 {
 	static const Position margin = Position(16, 16);
 	int buildings = 0;
+
 	Position topLeft = Position(tile);
 	Position bottomRight = topLeft + Position(type.tileWidth() * 32, type.tileHeight() * 32) ;
 
@@ -476,12 +581,6 @@ bool StarcraftBot::buildingTooClose(TilePosition tile, UnitType type)
 
 	return buildings > 0;
 }
-
-
-
-
-
-
 
 bool StarcraftBot::canAfford(UnitType unit)
 {
@@ -513,6 +612,12 @@ void StarcraftBot::trainUnit(UnitType type, int amount)
 {
 	for (int i = 0; i < amount; i++)
 		activeCommands.add(new TrainCommand(this, type));
+}
+
+void StarcraftBot::constructAddon(UnitType addon, int amount)
+{
+	for (int i = 0; i < amount; i++)
+		activeCommands.add(new AddonCommand(this, type));
 }
 
 void StarcraftBot::constructBuilding(UnitType type, int amount)

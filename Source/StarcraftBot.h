@@ -17,6 +17,8 @@ private:
 	class Command;
 	class BuildCommand;
 	class TrainCommand;
+	class AddonCommand;
+	class TechCommand;
 
 
 	Unit* focusWorker;
@@ -49,6 +51,7 @@ public:
 	// --- //
 
 	// Help Functions //
+	bool canBuildHere(Unit* worker, TilePosition tile, UnitType type);
 	bool buildingTooClose(TilePosition tile, UnitType type);
 
 	bool canAfford(UnitType unit);
@@ -58,6 +61,8 @@ public:
 
 	// Action Functions //
 	void trainUnit(UnitType type, int amount = 1);
+	void researchTech(UnitType addon, int amount = 1);
+	void constructAddon(UnitType addon, int amount = 1);
 	void constructBuilding(UnitType building, int amount = 1);
 
 	void idleWorkers();
