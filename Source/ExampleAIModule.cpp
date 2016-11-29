@@ -18,9 +18,9 @@ void ExampleAIModule::onStart()
 	//Enable flags
 	Broodwar->enableFlag(Flag::UserInput);
 	//Uncomment to enable complete map information
-	//Broodwar->enableFlag(Flag::CompleteMapInformation);
+	Broodwar->enableFlag(Flag::CompleteMapInformation);
 
-	Broodwar->setLocalSpeed(10);
+	Broodwar->setLocalSpeed(0);
 
 	//Start analyzing map data
 	BWTA::readMap();
@@ -38,9 +38,11 @@ void ExampleAIModule::onStart()
 //No need to change this.
 void ExampleAIModule::onEnd(bool isWinner)
 {
+	bot.onEnd();
 	if (isWinner)
 	{
 		Broodwar->sendText("I won!");
+		Broodwar->leaveGame();
 	}
 }
 
@@ -55,7 +57,7 @@ void ExampleAIModule::onFrame()
 	if (analyzed)
 	{
 		drawTerrainData();
-		drawStats();
+		//drawStats();
 	}
 }
 
@@ -142,6 +144,7 @@ void ExampleAIModule::onUnitCreate(BWAPI::Unit* unit)
 //Called when a unit has been destroyed.
 void ExampleAIModule::onUnitDestroy(BWAPI::Unit* unit)
 {
+	bot.onUnitDestroy(unit);
 	//if (unit->getPlayer() == Broodwar->self())
 	//{
 	//	Broodwar->sendText("My unit %s [%x] has been destroyed at (%d,%d)",unit->getType().getName().c_str(),unit,unit->getPosition().x(),unit->getPosition().y());
@@ -176,7 +179,6 @@ void ExampleAIModule::onSaveGame(std::string gameName)
 //No need to change this.
 DWORD WINAPI AnalyzeThread()
 {
-	BWTA::analyze();
 
 	//Self start location only available if the map has base locations
 	if (BWTA::getStartLocation(BWAPI::Broodwar->self())!=NULL)

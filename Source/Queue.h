@@ -138,4 +138,15 @@ public:
 	{
 		return root->data;
 	}
+
+	void forEach(void (*fun)(T &data))
+	{
+		Node* walker = root;
+
+		while (walker != NULL)
+		{
+			fun(walker->data);
+			walker = walker->next;
+		}
+	}
 };
